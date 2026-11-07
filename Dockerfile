@@ -15,11 +15,14 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-# Upgrade pip
-RUN pip install --no-cache-dir --upgrade pip
+# Pin pip to avoid index name inconsistency bug in pip 24.1+
+RUN pip install --no-cache-dir "pip<24.1"
 
-# Install CPU PyTorch cleanly using extra-index-url (prevents Jinja2/typing_extensions metadata conflict)
-RUN pip install --no-cache-dir torch torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
+# Pre-install Jinja2 and typing-extensions from PyPI to avoid pytorch wheel case mismatch
+RUN pip install --no-cache-dir "Jinja2>=3.1.2" "typing-extensions>=4.10.0"
+
+# Install CPU PyTorch from official CPU wheel repo
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Install application dependencies
 COPY --chown=user requirements.txt .
