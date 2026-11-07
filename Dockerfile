@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up user for Hugging Face Space security
+# Set up non-root user
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
@@ -15,8 +15,11 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-# Install PyTorch CPU first (saves 1.5GB of GPU overhead!)
-RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install CPU PyTorch cleanly using extra-index-url (prevents Jinja2/typing_extensions metadata conflict)
+RUN pip install --no-cache-dir torch torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Install application dependencies
 COPY --chown=user requirements.txt .
@@ -25,7 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files and voiceprints
 COPY --chown=user . .
 
-# Hugging Face Spaces default port is 7860
-EXPOSE 7860
+# Render exposes $PORT (default 10000), HuggingFace uses 7860
+EXPOSE 10000
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-10000}"]
